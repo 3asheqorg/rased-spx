@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>راصد SPX | لوحة تحليل السيولة وعقود الخيارات</title>
+  <!-- خط تجوال العربي + Chart.js للرسوم البيانية -->
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg-main: #090d16;
+      --bg-card: #111827;
+      --bg-card-hover: #172033;
+      --border-color: #1f2937;
+      --text-primary: #f3f4f6;
+      --text-secondary: #9ca3af;
+      --accent-blue: #3b82f6;
+      --accent-cyan: #06b6d4;
+      --green: #10b981;
+      --green-bg: rgba(16, 185, 129, 0.14);
+      --red: #ef4444;
+      --red-bg: rgba(239, 68, 68, 0.14);
+      --amber: #f59e0b;
+      --amber-bg: rgba(245, 158, 11, 0.14);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Tajawal', sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-primary);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* الشريط العلوي */
+    header {
+      background: rgba(17, 24, 39, 0.92);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border-color);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      padding: 12px 20px;
+    }
+
+    .nav-container {
+      max-width: 1400px;
+      margin: auto;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .brand span.logo-badge {
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+      padding: 4px 10px;
+      border-radius: 8px;
+      font-size: 1rem;
+    }
+
+    .nav-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .nav-btn {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-secondary);
+      padding: 6px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.92rem;
+      font-weight: 700;
+      transition: 0.2s;
+    }
+
+    .nav-btn:hover, .nav-btn.active {
+      background: var(--bg-card-hover);
+      color: #fff;
+      border-color: var(--accent-blue);
+    }
+
+    .live-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--green-bg);
+      color: var(--green);
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+      70% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+
+    .refresh-btn {
+      background: var(--accent-blue);
+      color: #fff;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 0.88rem;
+      transition: 0.2s;
+    }
+
+    .refresh-btn:hover {
+      background: #2563eb;
+    }
+
+    /* الحاوية الرئيسية */
+    main {
+      max-width: 1400px;
+      margin: 20px auto;
+      padding: 0 16px 40px;
+    }
+
+    /* شريط التنبيهات المتحرك */
+    .ticker-bar {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 10px 16px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      overflow-x: auto;
+      white-space: nowrap;
+      font-size: 0.9rem;
+    }
+
+    .ticker-tag {
+      background: var(--amber-bg);
+      color: var(--amber);
+      padding: 2px 10px;
+      border-radius: 6px;
+      font-weight: 700;
+    }
+
+    /* بطاقات المؤشرات KPI */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .kpi-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 18px;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+
+    .kpi-card:hover {
+      transform: translateY(-2px);
+      border-color: #374151;
+    }
+
+    .kpi-title {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .kpi-value {
+      font-size: 1.75rem;
+      font-weight: 800;
+      margin: 8px 0 4px;
+      direction: ltr;
+      text-align: right;
+    }
+
+    .kpi-sub {
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+
+    .text-green { color: var(--green); }
+    .text-red { color: var(--red); }
+    .text-cyan { color: var(--accent-cyan); }
+    .text-amber { color: var(--amber); }
+
+    /* الأقسام والشبكة */
+    .section-block {
+      margin-bottom: 28px;
+    }
+
+    .grid-2-col {
+      display: grid;
+      grid-template-columns: 1.3fr 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 992px) {
+      .grid-2-col {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 20px;
+    }
+
+    .panel-header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 12px;
+    }
+
+    .panel-title {
+      font-size: 1.15rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* شارت الجامـا */
+    .chart-wrapper {
+      position: relative;
+      height: 330px;
+      width: 100%;
+    }
+
+    .gamma-levels {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 14px;
+      font-size: 0.85rem;
+    }
+
+    .level-badge {
+      padding: 5px 10px;
+      border-radius: 8px;
+      background: #1f2937;
+      font-weight: 700;
+    }
+
+    /* الخريطة الحرارية */
+    .heatmap-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    @media (max-width: 500px) {
+      .heatmap-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    .heat-box {
+      border-radius: 10px;
+      padding: 12px 8px;
+      text-align: center;
+      cursor: pointer;
+      transition: 0.2s;
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .heat-box:hover {
+      transform: scale(1.03);
+      border-color: #fff;
+    }
+
+    .heat-sym {
+      font-weight: 800;
+      font-size: 1rem;
+      letter-spacing: 0.5px;
+    }
+
+    .heat-pct {
+      font-size: 0.85rem;
+      font-weight: 700;
+      direction: ltr;
+    }
+
+    .heat-flow {
+      font-size: 0.75rem;
+      opacity: 0.9;
+      margin-top: 2px;
+    }
+
+    /* فلاتر جدول الأوبشن */
+    .filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .filter-chip {
+      background: #1f2937;
+      color: var(--text-secondary);
+      border: 1px solid #374151;
+      padding: 5px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+
+    .filter-chip.active {
+      background: var(--accent-blue);
+      color: #fff;
+      border-color: var(--accent-blue);
+    }
+
+    .search-input {
+      background: #0f172a;
+      border: 1px solid #374151;
+      color: #fff;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 0.88rem;
+      width: 140px;
+    }
+
+    /* جدول العقود */
+    .table-responsive {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: right;
+      font-size: 0.92rem;
+    }
+
+    th {
+      background: #0f172a;
+      color: var(--text-secondary);
+      padding: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 12px;
+      border-bottom: 1px solid var(--border-color);
+      white-space: nowrap;
+    }
+
+    tr:hover td {
+      background: var(--bg-card-hover);
+    }
+
+    .badge-call {
+      background: var(--green-bg);
+      color: var(--green);
+      padding: 3px 10px;
+      border-radius: 6px;
+      font-weight: 800;
+    }
+
+    .badge-put {
+      background: var(--red-bg);
+      color: var(--red);
+      padding: 3px 10px;
+      border-radius: 6px;
+      font-weight: 800;
+    }
+
+    .badge-unusual {
+      background: var(--amber-bg);
+      color: var(--amber);
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+
+    /* الأخبار والإجازات */
+    .news-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border-color);
+      gap: 10px;
+    }
+
+    .news-item:last-child {
+      border-bottom: none;
+    }
+
+    .impact-high {
+      background: var(--red-bg);
+      color: var(--red);
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+
+    .impact-med {
+      background: var(--amber-bg);
+      color: var(--amber);
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+
+    footer {
+      text-align: center;
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+      padding: 20px;
+      border-top: 1px solid var(--border-color);
+      margin-top: 30px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- الهيدر والقائمة -->
+  <header>
+    <div class="nav-container">
+      <div class="brand">
+        <span class="logo-badge">⚡ SPX</span>
+        <span>راصد السيولة والأوبشن</span>
+      </div>
+
+      <nav class="nav-links">
+        <button class="nav-btn active" onclick="scrollToSection('overview')">📊 راصد سباكس</button>
+        <button class="nav-btn" onclick="scrollToSection('gamma-section')">📈 شارت جاما</button>
+        <button class="nav-btn" onclick="scrollToSection('heatmap-section')">🔥 الخريطة الحرارية</button>
+        <button class="nav-btn" onclick="scrollToSection('flow-section')">🐋 راصد الشركات والعقود</button>
+        <button class="nav-btn" onclick="scrollToSection('news-section')">📰 الأخبار والإجازات</button>
+      </nav>
+
+      <div class="live-controls">
+        <div class="status-pill">
+          <span class="pulse-dot"></span>
+          <span id="clock-time">--:--:--</span>
+        </div>
+        <button class="refresh-btn" onclick="simulateLiveUpdate()">🔄 تحديث السيولة</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- شريط التنبيهات الفوري -->
+    <div class="ticker-bar">
+      <span class="ticker-tag">⚡ تنبيه حيتان</span>
+      <span id="live-alert-text">دخول سيولة مؤسسية ضخمة على SPX 5950 CALL بقيمة $4.2M (Vol > OI) — تمركز إيجابي فوق مستوى Gamma Flip.</span>
+    </div>
+
+    <!-- بطاقات المؤشرات الرئيسية -->
+    <section id="overview" class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-title">
+          <span>مؤشر S&P 500 (SPX)</span>
+          <span>🇺🇸</span>
+        </div>
+        <div class="kpi-value" id="spx-price">5,942.50</div>
+        <div class="kpi-sub text-green" id="spx-change">+34.80 (+0.59%) ▲</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-title">
+          <span>صافي جاما سباكس (Net GEX)</span>
+          <span>⚖️</span>
+        </div>
+        <div class="kpi-value text-cyan" id="net-gex">+$3.85B</div>
+        <div class="kpi-sub text-secondary">بيئة استقرار (Positive Gamma)</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-title">
+          <span>نسبة البوت / الكول (PCR)</span>
+          <span>📊</span>
+        </div>
+        <div class="kpi-value" id="pcr-val">0.78</div>
+        <div class="kpi-sub text-green" id="pcr-status">زخم شرائي (Call Dominance)</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-title">
+          <span>صافي سيولة الحيتان اليوم</span>
+          <span>🐋</span>
+        </div>
+        <div class="kpi-value text-green" id="whale-net">+$148.6M</div>
+        <div class="kpi-sub text-secondary">64% عقود CALL | 36% عقود PUT</div>
+      </div>
+    </section>
+
+    <!-- القسم الأوسط: شارت جاما + الخريطة الحرارية -->
+    <section class="grid-2-col section-block">
+      <!-- شارت جاما سباكس -->
+      <div id="gamma-section" class="panel">
+        <div class="panel-header">
+          <div class="panel-title">📈 شارت جاما سباكس (SPX Gamma Exposure)</div>
+          <span class="text-secondary" style="font-size:0.85rem;">0DTE & Weekly Strikes</span>
+        </div>
+        <div class="chart-wrapper">
+          <canvas id="gammaChart"></canvas>
+        </div>
+        <div class="gamma-levels">
+          <span class="level-badge text-green">🟢 Call Wall (مقاومة): 5975</span>
+          <span class="level-badge text-amber">🟡 Gamma Flip (نقطة التحول): 5920</span>
+          <span class="level-badge text-red">🔴 Put Wall (دعم): 5880</span>
+        </div>
+      </div>
+
+      <!-- الخريطة الحرارية -->
+      <div id="heatmap-section" class="panel">
+        <div class="panel-header">
+          <div class="panel-title">🔥 الخريطة الحرارية للسيولة</div>
+          <span class="text-secondary" style="font-size:0.85rem;">انقر على السهم للفلترة</span>
+        </div>
+        <div class="heatmap-grid" id="heatmap-container">
+          <!-- يتم تعبئتها تلقائياً عبر JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- جدول راصد العقود والسيولة -->
+    <section id="flow-section" class="panel section-block">
+      <div class="panel-header">
+        <div class="panel-title">🐋 راصد الشركات وعقود الأوبشن غير الاعتيادية</div>
+        <div class="filter-bar">
+          <input type="text" id="symbol-search" class="search-input" placeholder="بحث رمز (NVDA...)" onkeyup="renderFlowTable()">
+          <button class="filter-chip active" onclick="setFilter('ALL', this)">الكل</button>
+          <button class="filter-chip" onclick="setFilter('SPX', this)">SPX فقط</button>
+          <button class="filter-chip" onclick="setFilter('CALL', this)">CALL 🟢</button>
+          <button class="filter-chip" onclick="setFilter('PUT', this)">PUT 🔴</button>
+          <button class="filter-chip" onclick="setFilter('UNUSUAL', this)">Vol > OI 🔥</button>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>الوقت</th>
+              <th>الرمز</th>
+              <th>النوع</th>
+              <th>السترايك</th>
+              <th>الانتهاء</th>
+              <th>سعر العقد</th>
+              <th>الحجم (Vol)</th>
+              <th>العقود المفتوحة (OI)</th>
+              <th>السيولة (Premium)</th>
+              <th>الإشارة</th>
+            </tr>
+          </thead>
+          <tbody id="flow-tbody">
+            <!-- يتم تعبئته تلقائياً -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- الأخبار الاقتصادية وإجازات السوق -->
+    <section id="news-section" class="grid-2-col">
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">📰 المفكرة الاقتصادية اليوم (توقيت السوق)</div>
+        </div>
+        <div class="news-item">
+          <div>
+            <strong>مؤشر مديري المشتريات الخدمي (ISM Services PMI)</strong>
+            <div class="text-secondary" style="font-size:0.82rem;">التقدير: 53.8 | السابق: 54.1</div>
+          </div>
+          <span class="impact-high">تأثير مرتفع 🔴</span>
+        </div>
+        <div class="news-item">
+          <div>
+            <strong>تصريحات أعضاء الفيدرالي الأمريكي (FOMC)</strong>
+            <div class="text-secondary" style="font-size:0.82rem;">مراقبة تلميحات الفائدة والتضخم</div>
+          </div>
+          <span class="impact-high">تأثير مرتفع 🔴</span>
+        </div>
+        <div class="news-item">
+          <div>
+            <strong>مخزونات النفط الأمريكي الخام</strong>
+            <div class="text-secondary" style="font-size:0.82rem;">التقدير: -1.2M برميل</div>
+          </div>
+          <span class="impact-med">تأثير متوسط 🟡</span>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">🏖️ جدول إجازات السوق الأمريكي القادمة</div>
+        </div>
+        <div class="news-item">
+          <div>
+            <strong>عيد الشكر (Thanksgiving Day)</strong>
+            <div class="text-secondary" style="font-size:0.82rem;">الخميس — السوق مغلق بالكامل</div>
+          </div>
+          <span class="level-badge text-red">إغلاق كامل</span>
+        </div>
+        <div class="news-item">
+          <div>
+            <strong>الجمعة السوداء (Black Friday)</strong>
+            <div class="text-secondary" style="font-size:0.82rem;">إغلاق مبكر الساعة 1:00 ظهراً بتوقيت نيويورك</div>
+          </div>
+          <span class="level-badge text-amber">إغلاق مبكر</span>
+        </div>
+        <div class="news-item">
+          <div>
+            <strong>عيد الميلاد (Christmas Day)</strong>
+            <div class="text-secondary" style="font-size:0.82rem;">25 ديسمبر — السوق مغلق بالكامل</div>
+          </div>
+          <span class="level-badge text-red">إغلاق كامل</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    راصد SPX — لوحة تحليل السيولة وعقود الخيارات | البيانات المعروضة لأغراض التحليل والمتابعة الفنية وليست توصية استثمارية.
+  </footer>
+
+  <script>
+    // 1. بيانات الخريطة الحرارية
+    const heatmapData = [
+      { sym: 'NVDA', pct: '+3.45%', flow: '+$42.1M', val: 3.45 },
+      { sym: 'TSLA', pct: '+2.80%', flow: '+$31.5M', val: 2.80 },
+      { sym: 'SPX',  pct: '+0.59%', flow: '+$85.0M', val: 0.59 },
+      { sym: 'QQQ',  pct: '+0.82%', flow: '+$29.4M', val: 0.82 },
+      { sym: 'AAPL', pct: '+1.15%', flow: '+$18.2M', val: 1.15 },
+      { sym: 'MSFT', pct: '-0.45%', flow: '-$12.0M', val: -0.45 },
+      { sym: 'META', pct: '+1.90%', flow: '+$22.7M', val: 1.90 },
+      { sym: 'AMD',  pct: '-1.60%', flow: '-$19.8M', val: -1.60 },
+      { sym: 'AMZN', pct: '+0.95%', flow: '+$15.3M', val: 0.95 },
+      { sym: 'GOOGL',pct: '-0.30%', flow: '-$7.4M',  val: -0.30 },
+      { sym: 'PLTR', pct: '+4.10%', flow: '+$26.9M', val: 4.10 },
+      { sym: 'MSTR', pct: '-2.35%', flow: '-$24.1M', val: -2.35 }
+    ];
+
+    // 2. بيانات تدفق عقود الأوبشن
+    let optionsFlowData = [
+      { time: '17:42:10', sym: 'SPX',  type: 'CALL', strike: '5950', exp: '0DTE',  price: '$4.80', vol: 8420, oi: 3100, prem: '$4.04M', unusual: true },
+      { time: '17:39:55', sym: 'NVDA', type: 'CALL', strike: '148',  exp: 'Weekly',price: '$2.15', vol: 15200,oi: 6400, prem: '$3.26M', unusual: true },
+      { time: '17:35:20', sym: 'TSLA', type: 'CALL', strike: '350',  exp: 'Weekly',price: '$5.40', vol: 6100, oi: 4800, prem: '$3.29M', unusual: true },
+      { time: '17:31:04', sym: 'SPX',  type: 'PUT',  strike: '5900', exp: '0DTE',  price: '$2.30', vol: 9300, oi: 11200,prem: '$2.13M', unusual: false },
+      { time: '17:26:48', sym: 'QQQ',  type: 'CALL', strike: '512',  exp: '2DTE',  price: '$1.85', vol: 12400,oi: 5100, prem: '$2.29M', unusual: true },
+      { time: '17:20:15', sym: 'AMD',  type: 'PUT',  strike: '138',  exp: 'Weekly',price: '$1.95', vol: 7800, oi: 3200, prem: '$1.52M', unusual: true },
+      { time: '17:15:33', sym: 'META', type: 'CALL', strike: '590',  exp: 'Weekly',price: '$4.10', vol: 3400, oi: 2900, prem: '$1.39M', unusual: true },
+      { time: '17:10:02', sym: 'MSTR', type: 'PUT',  strike: '380',  exp: 'Weekly',price: '$8.50', vol: 2900, oi: 1400, prem: '$2.46M', unusual: true }
+    ];
+
+    let activeFilter = 'ALL';
+
+    // رسم الخريطة الحرارية
+    function renderHeatmap() {
+      const container = document.getElementById('heatmap-container');
+      container.innerHTML = '';
+      heatmapData.forEach(item => {
+        let bgColor = '';
+        if (item.val >= 2.5) bgColor = 'rgba(16, 185, 129, 0.45)';
+        else if (item.val > 0) bgColor = 'rgba(16, 185, 129, 0.22)';
+        else if (item.val <= -1.5) bgColor = 'rgba(239, 68, 68, 0.45)';
+        else bgColor = 'rgba(239, 68, 68, 0.22)';
+
+        const box = document.createElement('div');
+        box.className = 'heat-box';
+        box.style.background = bgColor;
+        box.innerHTML = `
+          <div class="heat-sym">${item.sym}</div>
+          <div class="heat-pct">${item.pct}</div>
+          <div class="heat-flow">${item.flow}</div>
+        `;
+        box.onclick = () => {
+          document.getElementById('symbol-search').value = item.sym;
+          renderFlowTable();
+          scrollToSection('flow-section');
+        };
+        container.appendChild(box);
+      });
+    }
+
+    // فلترة وعرض جدول العقود
+    function setFilter(filterType, btn) {
+      activeFilter = filterType;
+      document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+      renderFlowTable();
+    }
+
+    function renderFlowTable() {
+      const tbody = document.getElementById('flow-tbody');
+      const query = document.getElementById('symbol-search').value.trim().toUpperCase();
+      tbody.innerHTML = '';
+
+      const filtered = optionsFlowData.filter(row => {
+        if (query && !row.sym.includes(query)) return false;
+        if (activeFilter === 'SPX' && row.sym !== 'SPX') return false;
+        if (activeFilter === 'CALL' && row.type !== 'CALL') return false;
+        if (activeFilter === 'PUT' && row.type !== 'PUT') return false;
+        if (activeFilter === 'UNUSUAL' && !row.unusual) return false;
+        return true;
+      });
+
+      filtered.forEach(row => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td style="direction:ltr; text-align:right; color:#9ca3af;">${row.time}</td>
+          <td><strong>${row.sym}</strong></td>
+          <td><span class="${row.type === 'CALL' ? 'badge-call' : 'badge-put'}">${row.type}</span></td>
+          <td><strong>${row.strike}</strong></td>
+          <td>${row.exp}</td>
+          <td>${row.price}</td>
+          <td class="${row.vol > row.oi ? 'text-amber' : ''}"><strong>${row.vol.toLocaleString()}</strong></td>
+          <td>${row.oi.toLocaleString()}</td>
+          <td class="text-cyan"><strong>${row.prem}</strong></td>
+          <td>${row.unusual ? '<span class="badge-unusual">🔥 Vol > OI</span>' : '<span class="text-secondary">عادي</span>'}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // رسم شارت جاما سباكس عبر Chart.js
+    let gammaChartInstance;
+    function initGammaChart() {
+      const ctx = document.getElementById('gammaChart').getContext('2d');
+      const strikes = ['5860', '5880', '5900', '5920', '5940', '5950', '5960', '5975', '6000'];
+      const gammaValues = [-1.4, -2.6, -1.1, 0.3, 1.8, 2.5, 2.1, 3.4, 1.9];
+
+      gammaChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: strikes,
+          datasets: [{
+            label: 'صافي الجامـا ($B)',
+            data: gammaValues,
+            backgroundColor: gammaValues.map(v => v >= 0 ? 'rgba(16, 185, 129, 0.8)' : 'rgba(239, 68, 68, 0.8)'),
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => ` Gamma: ${ctx.raw > 0 ? '+' : ''}${ctx.raw}B$`
+              }
+            }
+          },
+          scales: {
+            x: {
+              ticks: { color: '#9ca3af', font: { weight: 'bold' } },
+              grid: { color: 'rgba(255,255,255,0.05)' }
+            },
+            y: {
+              ticks: { color: '#9ca3af' },
+              grid: { color: 'rgba(255,255,255,0.05)' }
+            }
+          }
+        }
+      });
+    }
+
+    // محاكاة تحديث البيانات اللحظية
+    function simulateLiveUpdate() {
+      const baseSpx = 5942.50 + (Math.random() * 14 - 7);
+      const diff = (baseSpx - 5907.70).toFixed(2);
+      const pct = ((diff / 5907.70) * 100).toFixed(2);
+
+      document.getElementById('spx-price').innerText = baseSpx.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const chgEl = document.getElementById('spx-change');
+      chgEl.innerText = `${diff >= 0 ? '+' : ''}${diff} (${pct}%) ${diff >= 0 ? '▲' : '▼'}`;
+      chgEl.className = `kpi-sub ${diff >= 0 ? 'text-green' : 'text-red'}`;
+
+      // إضافة عقد جديد أعلى الجدول
+      const sampleSyms = ['SPX', 'NVDA', 'TSLA', 'SPY', 'QQQ', 'AAPL'];
+      const sym = sampleSyms[Math.floor(Math.random() * sampleSyms.length)];
+      const isCall = Math.random() > 0.35;
+      const now = new Date().toTimeString().split(' ')[0];
+      const strike = sym === 'SPX' ? Math.round(baseSpx / 5) * 5 : Math.floor(140 + Math.random() * 200);
+      const prem = (1.1 + Math.random() * 4.5).toFixed(2);
+
+      optionsFlowData.unshift({
+        time: now,
+        sym: sym,
+        type: isCall ? 'CALL' : 'PUT',
+        strike: strike.toString(),
+        exp: '0DTE',
+        price: `$${(1.5 + Math.random() * 5).toFixed(2)}`,
+        vol: Math.floor(5000 + Math.random() * 12000),
+        oi: Math.floor(2000 + Math.random() * 4000),
+        prem: `$${prem}M`,
+        unusual: true
+      });
+
+      document.getElementById('live-alert-text').innerText =
+        `رصد سيولة جديدة: ${sym} ${strike} ${isCall ? 'CALL' : 'PUT'} بقيمة $${prem}M (Vol > OI) الساعة ${now}`;
+
+      renderFlowTable();
+    }
+
+    // تحديث الساعة
+    function updateClock() {
+      const now = new Date();
+      document.getElementById('clock-time').innerText = now.toLocaleTimeString('en-GB');
+    }
+
+    function scrollToSection(id) {
+      document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // التشغيل عند فتح الصفحة
+    window.onload = () => {
+      renderHeatmap();
+      renderFlowTable();
+      initGammaChart();
+      updateClock();
+      setInterval(updateClock, 1000);
+    };
+  </script>
+</body>
+</html>
